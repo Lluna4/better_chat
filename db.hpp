@@ -214,7 +214,7 @@ static char	*ft_make_ret(int n, int sign)
 	return (ret);
 }
 
-char	*ft_itoa(int n)
+static inline char	*ft_itoa(int n)
 {
 	char	*ret;
 	int		sign;

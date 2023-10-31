@@ -13,66 +13,6 @@ int conn_PORT = 5050;
 const std::string SERVER_IP = "0.0.0.0";
 const char *name = "Lunasv2";
 
-char* ft_strjoin(char const* s1, char const* s2)
-
-{
-	char* ret;
-	int		n;
-
-	n = -1;
-	if (*s1 == '\0' && *s2 == '\0')
-		return (strdup(""));
-	ret = (char *)calloc(strlen(s1) + strlen(s2) + 1, sizeof(char));
-	if (!ret)
-		return (0);
-	while (*s1 != '\0')
-	{
-		n++;
-		ret[n] = *s1;
-		s1++;
-	}
-	while (*s2 != '\0')
-	{
-		n++;
-		ret[n] = *s2;
-		s2++;
-	}
-	return (ret);
-}
-
-char* ft_strjoin(char const* s1, char const* s2, char const *s3)
-
-{
-	char* ret;
-	int		n;
-
-	n = -1;
-	if (*s1 == '\0' && *s2 == '\0')
-		return (strdup(""));
-	ret = (char *)calloc(1024, sizeof(char));
-	if (!ret)
-		return (0);
-	while (*s1 != '\0')
-	{
-		n++;
-		ret[n] = *s1;
-		s1++;
-	}
-	while (*s2 != '\0')
-	{
-		n++;
-		ret[n] = *s2;
-		s2++;
-	}
-	while (*s3 != '\0')
-	{
-		n++;
-		ret[n] = *s3;
-		s3++;
-	}
-	return (ret);
-}
-
 std::string get_time()
 {
 	time_t tiempo;
@@ -86,6 +26,24 @@ std::string get_time()
     if (strlen(sec) == 1)
 		sec = ft_strjoin("0", sec);
 	return std::format("{}:{}:{}", a->tm_hour, min, sec);
+}
+
+template<typename T>
+void log(T value)
+{
+    std::cout << "[" << get_time() << "] " << value << std::endl;
+}
+
+template<typename T>
+void log(T value, T value2)
+{
+    std::cout << "[" << get_time() << "] " << value << value2 << std::endl;
+}
+
+template<typename T, typename B>
+void log(T value, B value2)
+{
+    std::cout << "[" << get_time() << "] " << value << value2 << std::endl;
 }
 
 void keepalive(int socket)
@@ -105,9 +63,6 @@ void get_servers()
     struct sockaddr_in address;
     std::vector<std::vector<int>> tabla;
     //bool playing = true;
-    int x = 0;
-    int y = 0;
-    char *buf = (char *)calloc(3, sizeof(char));
     std::string buff;
     
     sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -132,11 +87,40 @@ void get_servers()
     keepaliv.detach();
 }
 
+void create_config()
+{
+    std::ofstream cfg("central_config.cfg");
+    cfg << "//Central Server config\n";
+    cfg << "//This changes the port the server listens to\n";
+    cfg << "port:5050";
+    cfg.close();
+}
+
+void load_config()
+{
+    std::ifstream infile("config.cfg");
+    std::string linea;
+    while (std::getline(infile, linea))
+    {
+        //std::cout << linea << std::endl;
+        if (linea.starts_with("//") == false)
+        {
+            std::vector<std::string> values = tokenize(linea, ':');
+            if (values[0].compare("port") == 0)
+            {
+                PORT = atoi(values[1].c_str());
+                break;
+            }
+        }
+        //linea.clear();
+    }
+}
+
 int main()
 {
     std::cout << "[" << get_time() << "] " << "Starting server..." << std::endl;
     struct sockaddr_in address;
-    int addrlen = sizeof(address);
+    //int addrlen = sizeof(address);
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     std::cout << "[" << get_time() << "] "<< "Initializing socket..." << std::endl;
     if (sock == 0)
@@ -159,7 +143,7 @@ int main()
     while (true)
     {
         listen(sock, 32);
-        int new_socket = accept(sock, (struct sockaddr*)&address, (socklen_t*)&addrlen);
+       // int new_socket = accept(sock, (struct sockaddr*)&address, (socklen_t*)&addrlen);
         /*std::cout << new_socket << std::endl;
         std::thread man_sv(manage_sv, new_socket);
         man_sv.detach();*/

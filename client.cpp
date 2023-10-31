@@ -6,6 +6,7 @@
 #include <chrono>
 #include <thread>
 #include <vector>
+#include "tokenize.hpp"
 
 int PORT = 5050;
 
@@ -33,6 +34,21 @@ int main()
     int conn = connect(sock, (struct sockaddr*)&address, sizeof(address));
     send(sock, "0", 1, 0);
     recv(sock, buf, 1024, 0);
-    std::cout << buf << std::endl;
+    buff = buf;
+    if (buff.find(',') != std::string::npos)
+    {
+        std::vector<std::string> a = tokenize(buff, ',');
+        for (size_t x = 0; x < a.size(); x++)
+        {
+            printf("%lu) %s\n", (x + 1), a[x].c_str());
+        }
+    }
+    else
+    {
+        std::cout << "1) " << buff << std::endl;
+    }
+
+
+    
     return 0;
 }

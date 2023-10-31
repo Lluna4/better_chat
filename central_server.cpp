@@ -13,66 +13,6 @@ db database = db("Servers", {"Name", "Ip", "Port"});
 int PORT = 5050;
 const std::string SERVER_IP = "0.0.0.0";
 
-char* ft_strjoin(char const* s1, char const* s2)
-
-{
-	char* ret;
-	int		n;
-
-	n = -1;
-	if (*s1 == '\0' && *s2 == '\0')
-		return (strdup(""));
-	ret = (char *)calloc(strlen(s1) + strlen(s2) + 1, sizeof(char));
-	if (!ret)
-		return (0);
-	while (*s1 != '\0')
-	{
-		n++;
-		ret[n] = *s1;
-		s1++;
-	}
-	while (*s2 != '\0')
-	{
-		n++;
-		ret[n] = *s2;
-		s2++;
-	}
-	return (ret);
-}
-
-char* ft_strjoin(char const* s1, char const* s2, char const *s3)
-
-{
-	char* ret;
-	int		n;
-
-	n = -1;
-	if (*s1 == '\0' && *s2 == '\0')
-		return (strdup(""));
-	ret = (char *)calloc(1024, sizeof(char));
-	if (!ret)
-		return (0);
-	while (*s1 != '\0')
-	{
-		n++;
-		ret[n] = *s1;
-		s1++;
-	}
-	while (*s2 != '\0')
-	{
-		n++;
-		ret[n] = *s2;
-		s2++;
-	}
-	while (*s3 != '\0')
-	{
-		n++;
-		ret[n] = *s3;
-		s3++;
-	}
-	return (ret);
-}
-
 std::string get_time()
 {
 	time_t tiempo;
@@ -88,10 +28,35 @@ std::string get_time()
 	return std::format("{}:{}:{}", a->tm_hour, min, sec);
 }
 
+template<typename T>
+void log(T value)
+{
+    std::cout << "[" << get_time() << "] " << value << std::endl;
+}
+
+template<typename T>
+void log(T value, T value2)
+{
+    std::cout << "[" << get_time() << "] " << value << value2 << std::endl;
+}
+
+template<typename T, typename B>
+void log(T value, B value2, T value3)
+{
+    std::cout << "[" << get_time() << "] " << value << value2 << value3 << std::endl;
+}
+
+template<typename T, typename B>
+void log(T value, B value2)
+{
+    std::cout << "[" << get_time() << "] " << value << value2 << std::endl;
+}
+
 void manage_sv(int socket)
 {
     char *buf = (char *)calloc(3, sizeof(char));
-    char *comp;
+    char comp[1024];
+    char sended[100];
     std::string buf2;
     std::vector<std::string> tokens;
     int index = 0;
@@ -106,7 +71,6 @@ void manage_sv(int socket)
             //handle client
             if (database.get_size() == 0)
                 send(socket, "0", 1, 0);
-            comp = (char *)calloc(1024, sizeof(char));
             for (int x = 0; x < database.get_size(); x++)
             {
                 if (x == 0)
@@ -114,23 +78,23 @@ void manage_sv(int socket)
                     memcpy(comp, database.get_value(x)[0].c_str(), database.get_value(x)[0].length());
                     continue;
                 }
-                comp = ft_strjoin(comp, ",", database.get_value(x)[0].c_str());
+                strcat(comp, ", ");
+                strcat(comp, database.get_value(x)[0].c_str());
             }
-            std::cout << "[" << get_time() << "] "<< comp << database.get_size() << std::endl;
+            log(comp, database.get_size());
             send(socket, comp, 1024, 0);
             recv(socket, buf, 1, 0);
             buf2 = buf;
             if (isNumber(buf2) && ft_atoi(buf) <= database.get_size())
             {
-                free(comp);
                 buf = ft_strjoin(database.get_value(ft_atoi(buf))[1].c_str(), ", ", database.get_value(ft_atoi(buf))[2].c_str());
-                comp = (char *)calloc(100, sizeof(char));
-                strncpy(comp, buf, strlen(buf));
-                send(socket, comp, 100, 0);
+                strncpy(sended, buf, strlen(buf));
+                send(socket, sended, 100, 0);
             }
             else
             {
-                std::cout << "[" << get_time() << "] "<< "\x1B[91mError: The client didnt send a number or the number is invalid " << buf2 <<  "\033[0m\t\t" << std::endl;
+                
+                log("\x1B[91mError: The client didnt send a number or the number is invalid ",  buf2, "\033[0m\t\t");
             }
             break;
         
@@ -142,27 +106,27 @@ void manage_sv(int socket)
             if (status == -1)
                 return;
             buf2 = buf;
-            std::cout << "[" << get_time() << "] "<< buf2 << std::endl;
+            log(buf2);
             tokens = tokenize(buf2, ',');
             if (tokens.size() != 3)
             {
-                std::cout << "[" << get_time() << "] "<< "\x1B[91mError: The server didn't send enough information " << tokens.size() <<  "\033[0m\t\t" << std::endl;
+                log("\x1B[91mError: The server didn't send enough information ", tokens.size(), "\033[0m\t\t");
                 return;
             }
             if (!isNumber(tokens[2]))
             {
-                std::cout << "[" << get_time() << "] "<< "\x1B[91mError: The port the server provided is not a number\033[0m\t\t" << std::endl;
+                log("\x1B[91mError: The port the server provided is not a number\033[0m\t\t");
                 return;
             }
             index = database.add_value(tokens);
-            std::cout << "[" << get_time() << "] "<< database.get_value(0)[1] << std::endl;
+            log(database.get_value(0)[1]);
             while (1)
             {
                 //keepalive
                 status = send(socket, "1", 1, 0);
                 if (status == -1)
                 {
-                    std::cout << "[" << get_time() << "] "<< tokens[0] << " has disconnected"<< std::endl;
+                    log(tokens[0], " has disconnected");
                     database.remove_value(index);
                     break;
                 }
@@ -171,12 +135,12 @@ void manage_sv(int socket)
                 status = recv(socket, buf, 1, 0);
                 if (buf[0] != '1' || status == -1)
                 {
-                    std::cout << "[" << get_time() << "] "<< tokens[0] << " has disconnected"<< std::endl;
+                    log(tokens[0], " has disconnected");
                     database.remove_value(index);
                     break;
                 }
                 memset(buf, 0, 1);
-                std::cout << "[" << get_time() << "] "<< tokens[0] << " kept alive"<< std::endl;
+                log(tokens[0], " kept alive");
                 std::this_thread::sleep_for(std::chrono::milliseconds(5000));
             }
             break;
@@ -187,13 +151,42 @@ void manage_sv(int socket)
     }
 }
 
+void create_config()
+{
+    std::ofstream cfg("central_config.cfg");
+    cfg << "//Central Server config\n";
+    cfg << "//This changes the port the server listens to\n";
+    cfg << "port:5050";
+    cfg.close();
+}
+
+void load_config()
+{
+    std::ifstream infile("central_config.cfg");
+    std::string linea;
+    while (std::getline(infile, linea))
+    {
+        //std::cout << linea << std::endl;
+        if (linea.starts_with("//") == false)
+        {
+            std::vector<std::string> values = tokenize(linea, ':');
+            if (values[0].compare("port") == 0)
+            {
+                PORT = atoi(values[1].c_str());
+                break;
+            }
+        }
+        //linea.clear();
+    }
+}
+
 int main()
 {
-    std::cout << "[" << get_time() << "] " << "Starting server..." << std::endl;
+    log("Starting server...");
     struct sockaddr_in address;
     int addrlen = sizeof(address);
     int sock = socket(AF_INET, SOCK_STREAM, 0);
-    std::cout << "[" << get_time() << "] "<< "Initializing socket..." << std::endl;
+    log("Initializing socket...");
     if (sock == 0)
     {
         std::cout << "Se fallo al crear socket" << std::endl;
@@ -202,17 +195,28 @@ int main()
     address.sin_family = AF_INET;
     inet_pton(AF_INET, SERVER_IP.c_str(), &address.sin_addr);
     address.sin_port = htons(PORT);
-    std::cout << "[" << get_time() << "] "<< "Binding..." << std::endl;
+    log("Binding...");
     if (bind(sock, (struct sockaddr*)&address, sizeof(address)) < 0)
     {
-        std::cout << "[" << get_time() << "] "<< "Bind failed" << std::endl;
+        log("Bind failed");
     }
-    std::cout << "[" << get_time() << "] "<< "listening" << " localhost:"<< PORT << std::endl;
+    log("listening" , std::format(" {}:{}", "localhost", PORT));
+    
+    if (std::filesystem::exists("central_config.cfg") == false)
+    {
+        create_config();
+        log("Config created");
+    }
+    else
+    {
+        load_config();
+        log("Config loaded");
+    }
     while (true)
     {
         listen(sock, 5);
         int new_socket = accept(sock, (struct sockaddr*)&address, (socklen_t*)&addrlen);
-        std::cout << new_socket << std::endl;
+        log(new_socket);
         std::thread man_sv(manage_sv, new_socket);
         man_sv.detach();
     }
