@@ -7,6 +7,7 @@
 #include <cstring>
 #include <ctime>
 #include <format>
+#include <filesystem>
 
 int PORT = 5052;
 int conn_PORT = 5050;
@@ -77,9 +78,9 @@ void get_servers()
     address.sin_port = htons(conn_PORT);
     int conn = connect(sock, (struct sockaddr*)&address, sizeof(address));
     send(sock, "1", 1, 0);
-    std::cout << "[" << get_time() << "] " << conn << std::endl;
+    log(conn);
     std::string sended = std::format("{},{},{}", name, SERVER_IP, ft_itoa(PORT));
-    std::cout << "[" << get_time() << "] " << sended << std::endl;
+    log(sended);
     char *comp = (char *)calloc(100, sizeof(char));
     strncpy(comp, sended.c_str(), sended.length());
     send(sock, comp, 100, 0);
@@ -89,16 +90,18 @@ void get_servers()
 
 void create_config()
 {
-    std::ofstream cfg("central_config.cfg");
+    std::ofstream cfg("sv.cfg");
     cfg << "//Central Server config\n";
     cfg << "//This changes the port the server listens to\n";
-    cfg << "port:5050";
+    cfg << "port:5051";
+    cfg << "//This changes the name of the server for the client";
+    cfg << "name:Test_sv";
     cfg.close();
 }
 
 void load_config()
 {
-    std::ifstream infile("config.cfg");
+    std::ifstream infile("sv.cfg");
     std::string linea;
     while (std::getline(infile, linea))
     {
@@ -109,7 +112,10 @@ void load_config()
             if (values[0].compare("port") == 0)
             {
                 PORT = atoi(values[1].c_str());
-                break;
+            }
+            else if (values[0].compare("name") == 0)
+            {
+                name = (char *)values[1].c_str();    
             }
         }
         //linea.clear();
@@ -119,27 +125,41 @@ void load_config()
 int main()
 {
     std::cout << "[" << get_time() << "] " << "Starting server..." << std::endl;
+    log("Starting server...");
     struct sockaddr_in address;
     //int addrlen = sizeof(address);
     int sock = socket(AF_INET, SOCK_STREAM, 0);
-    std::cout << "[" << get_time() << "] "<< "Initializing socket..." << std::endl;
+    if (std::filesystem::exists("sv.cfg") == false)
+    {
+        create_config();
+        log("Config created");
+    }
+    else
+    {
+        load_config();
+        log("Config loaded");
+        log("name:", name);
+        log("port:", PORT);
+    }
+    log("Initializing socket...");
     if (sock == 0)
     {
-        std::cout << "Se fallo al crear socket" << std::endl;
+        log("Failed to create socket");
         return -1;
     }
     address.sin_family = AF_INET;
     inet_pton(AF_INET, SERVER_IP.c_str(), &address.sin_addr);
     address.sin_port = htons(PORT);
     std::cout << "[" << get_time() << "] "<< "Binding..." << std::endl;
+    log("Binding..");
     if (bind(sock, (struct sockaddr*)&address, sizeof(address)) < 0)
     {
-        std::cout << "[" << get_time() << "] "<< "Bind failed" << std::endl;
+        log("Bind failed");
     }
-    std::cout << "[" << get_time() << "] "<< "listening" << " localhost:"<< PORT << std::endl;
-    std::cout << "[" << get_time() << "] "<< "Sending information to the central server..." << std::endl;
+    log("listening", std::format(" {}:{}", "localhost", PORT));
+    log("Sending information to the central server");
     get_servers();
-    std::cout << "[" << get_time() << "] "<< "Information sent" << std::endl;
+    log("Information sent");
     while (true)
     {
         listen(sock, 32);
