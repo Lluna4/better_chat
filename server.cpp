@@ -20,13 +20,15 @@ std::string get_time()
 	time(&tiempo);
 	struct tm* a = (tm*)malloc(1 * sizeof(tm));
 	localtime_r(&tiempo, a);
-	char* min = strdup(ft_itoa(a->tm_min));
-    char* sec = strdup(ft_itoa(a->tm_sec));
-	if (strlen(min) == 1)
-		min = ft_strjoin("0", min);
-    if (strlen(sec) == 1)
-		sec = ft_strjoin("0", sec);
-	return std::format("{}:{}:{}", a->tm_hour, min, sec);
+    std::string min = ft_itoa(a->tm_min);
+    std::string sec = ft_itoa(a->tm_sec);
+	if (min.length() == 1)
+		min = std::format("{}{}", "0", min);
+    if (sec.length() == 1)
+		sec = std::format("{}{}", "0", sec);
+    std::string ret = std::format("{}:{}:{}", a->tm_hour, min, sec);
+    free(a);
+	return ret;
 }
 
 template<typename T>

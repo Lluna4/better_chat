@@ -193,16 +193,13 @@ static int	ft_intlen(int n)
 	return (ret);
 }
 
-static char	*ft_make_ret(int n, int sign)
+static std::string ft_make_ret(int n, int sign)
 {
 	int		len;
-	char	*ret;
 
 	len = ft_intlen(n) + sign;
-	ret = (char *)calloc(len + 1, sizeof(char));
-	if (!ret)
-		return (0);
 	len--;
+    std::string ret(len + 1, '\0');
 	while (len >= 0)
 	{
 		ret[len] = (n % 10) + '0';
@@ -214,18 +211,15 @@ static char	*ft_make_ret(int n, int sign)
 	return (ret);
 }
 
-static inline char	*ft_itoa(int n)
+std::string	ft_itoa(int n)
 {
-	char	*ret;
+    std::string ret;
 	int		sign;
 
 	sign = 0;
 	if (n == -2147483648)
 	{
-		ret = (char *)malloc(12 * sizeof(char));
-		if (!ret)
-			return (0);
-		memcpy(ret, "-2147483648", 12);
+		ret = "-2147483648";
 		return (ret);
 	}
 	if (n < 0)
