@@ -7,6 +7,7 @@
 #include <thread>
 #include <vector>
 #include "tokenize.hpp"
+#include "db.hpp"
 
 int PORT = 5050;
 
@@ -16,8 +17,6 @@ int main()
     struct sockaddr_in address;
     std::vector<std::vector<int>> tabla;
     //bool playing = true;
-    int x = 0;
-    int y = 0;
     char *buf = (char *)calloc(1024, sizeof(char));
     std::string buff;
     
@@ -35,6 +34,7 @@ int main()
     send(sock, "0", 1, 0);
     recv(sock, buf, 1024, 0);
     buff = buf;
+    free(buf);
     if (buff.find(',') != std::string::npos)
     {
         std::vector<std::string> a = tokenize(buff, ',');
@@ -47,8 +47,14 @@ int main()
     {
         std::cout << "1) " << buff << std::endl;
     }
-
-
-    
+    buff.clear();
+    std::cin >> buff;
+    if (isNumber(buff) == true)
+    {
+	send(sock, (char *)buff.c_str(), 1, 0);
+	buf = (char *)calloc(100 + 1, sizeof(char));
+	recv(sock, buf, 100, 0);
+	std::cout << buf << std::endl;
+    }
     return 0;
 }

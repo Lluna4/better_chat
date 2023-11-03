@@ -87,11 +87,14 @@ void manage_sv(int socket)
             send(socket, comp, 1024, 0);
             recv(socket, buf, 1, 0);
             buf2 = buf;
+	    log("received: ", buf2);
             if (isNumber(buf2) && ft_atoi(buf) <= database.get_size())
             {
-                buf = ft_strjoin(database.get_value(ft_atoi(buf))[1].c_str(), ", ", database.get_value(ft_atoi(buf))[2].c_str());
-                strncpy(sended, buf, strlen(buf));
-                send(socket, sended, 100, 0);
+                buf2.clear();
+		buf2 = std::format("{},{}", database.get_value(ft_atoi(buf) - 1)[1], database.get_value(ft_atoi(buf) - 1)[2]);
+		buf2.append(100 - buf2.length(), '\0');
+		log("Sent server information ", buf2);
+                send(socket, (char *)buf2.c_str(), 100, 0);
             }
             else
             {
