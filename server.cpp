@@ -95,8 +95,8 @@ void create_config()
     std::ofstream cfg("sv.cfg");
     cfg << "//Central Server config\n";
     cfg << "//This changes the port the server listens to\n";
-    cfg << "port:5051";
-    cfg << "//This changes the name of the server for the client";
+    cfg << "port:5051\n";
+    cfg << "//This changes the name of the server for the client\n";
     cfg << "name:Test_sv";
     cfg.close();
 }
@@ -124,12 +124,23 @@ void load_config()
     }
 }
 
+void manage_sv(int socket)
+{
+    log("Client connected");
+    std::string motd = "Hola! Si ves esto es que todo ha ido genial!";
+    motd.append(1024 - motd.length(), '\0');
+    send(socket, motd.c_str(), 1024, 0);
+    log("Motd sent: ", motd);
+    close(socket);
+}
+
+
 int main()
 {
     std::cout << "[" << get_time() << "] " << "Starting server..." << std::endl;
     log("Starting server...");
     struct sockaddr_in address;
-    //int addrlen = sizeof(address);
+    int addrlen = sizeof(address);
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (std::filesystem::exists("sv.cfg") == false)
     {
@@ -165,10 +176,10 @@ int main()
     while (true)
     {
         listen(sock, 32);
-       // int new_socket = accept(sock, (struct sockaddr*)&address, (socklen_t*)&addrlen);
-        /*std::cout << new_socket << std::endl;
+        int new_socket = accept(sock, (struct sockaddr*)&address, (socklen_t*)&addrlen);
+        std::cout << new_socket << std::endl;
         std::thread man_sv(manage_sv, new_socket);
-        man_sv.detach();*/
+        man_sv.detach();
     }
     return 0;
 }
