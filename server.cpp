@@ -12,7 +12,9 @@
 int PORT = 5052;
 int conn_PORT = 5050;
 const std::string SERVER_IP = "0.0.0.0";
+std::string motd = "Hola! Si ves esto es que todo ha ido genial!";
 const char *name = "Lunasv2";
+std::vector<int> clients;
 
 std::string get_time()
 {
@@ -20,13 +22,16 @@ std::string get_time()
 	time(&tiempo);
 	struct tm* a = (tm*)malloc(1 * sizeof(tm));
 	localtime_r(&tiempo, a);
+    std::string h = ft_itoa(a->tm_hour);
     std::string min = ft_itoa(a->tm_min);
     std::string sec = ft_itoa(a->tm_sec);
+	if (h.length() == 1)
+		h = std::format("{}{}", "0", h);
 	if (min.length() == 1)
 		min = std::format("{}{}", "0", min);
     if (sec.length() == 1)
 		sec = std::format("{}{}", "0", sec);
-    std::string ret = std::format("{}:{}:{}", a->tm_hour, min, sec);
+    std::string ret = std::format("{}:{}:{}", h, min, sec);
     free(a);
 	return ret;
 }
@@ -35,6 +40,12 @@ template<typename T>
 void log(T value)
 {
     std::cout << "[" << get_time() << "] " << value << std::endl;
+}
+
+template<typename T>
+void log_err(T value)
+{
+    std::cout <<"\x1B[91m" << "[" << get_time() << "] " << value << "\033[0m\t\t" << std::endl;
 }
 
 template<typename T>
@@ -97,7 +108,9 @@ void create_config()
     cfg << "//This changes the port the server listens to\n";
     cfg << "port:5051\n";
     cfg << "//This changes the name of the server for the client\n";
-    cfg << "name:Test_sv";
+    cfg << "name:Test_sv\n";
+    cfg << "//This changes the motd of the server (message that sends first)\n";
+    cfg << "motd:Hola! Si ves esto es que todo ha ido genial!\n";
     cfg.close();
 }
 
@@ -119,6 +132,10 @@ void load_config()
             {
                 name = (char *)values[1].c_str();    
             }
+            else if (values[0].compare("motd") == 0)
+            {
+                motd = values[1];    
+            }
         }
         //linea.clear();
     }
@@ -126,11 +143,39 @@ void load_config()
 
 void manage_sv(int socket)
 {
+    int status = 0;
+    char *buf = (char *)calloc(1025, sizeof(char));
     log("Client connected");
-    std::string motd = "Hola! Si ves esto es que todo ha ido genial!";
     motd.append(1024 - motd.length(), '\0');
     send(socket, motd.c_str(), 1024, 0);
     log("Motd sent: ", motd);
+
+    while(true)
+    {
+        status = recv(socket, buf, 1024, 0);
+        if (status == -1)
+        {
+            break;
+        }
+        for (size_t x = 0; x < clients.size(); x++)
+        {
+            if (clients[x] != socket)
+            {
+                send(clients[x], buf, 1024, 0);
+            }
+        }
+        memset(buf, 0, 1024);
+    }
+    log_err(std::format("{}{}{}", "Client: ", socket, " has disconnected"));
+    for (unsigned int i = 0; i < clients.size(); i++)
+    {
+        if (clients[i] == socket)
+        {
+            clients.erase(clients.begin() + i);
+            break;
+        }
+    }
+    free(buf);
     close(socket);
 }
 
@@ -163,8 +208,7 @@ int main()
     address.sin_family = AF_INET;
     inet_pton(AF_INET, SERVER_IP.c_str(), &address.sin_addr);
     address.sin_port = htons(PORT);
-    std::cout << "[" << get_time() << "] "<< "Binding..." << std::endl;
-    log("Binding..");
+    log("Binding...");
     if (bind(sock, (struct sockaddr*)&address, sizeof(address)) < 0)
     {
         log("Bind failed");
@@ -177,7 +221,8 @@ int main()
     {
         listen(sock, 32);
         int new_socket = accept(sock, (struct sockaddr*)&address, (socklen_t*)&addrlen);
-        std::cout << new_socket << std::endl;
+        log("New client: ", new_socket);
+        clients.push_back(new_socket);
         std::thread man_sv(manage_sv, new_socket);
         man_sv.detach();
     }

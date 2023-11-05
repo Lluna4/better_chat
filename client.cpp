@@ -11,6 +11,23 @@
 
 int PORT = 5050;
 
+void read_msg(int socket)
+{
+    int status = 0;
+    while (true)
+    {
+        char *msg = (char *)calloc(1024, sizeof(char));
+        status = recv(socket, msg, 1024, 0);
+        if (status == -1)
+        {
+            exit(0);
+        }
+        if (msg[0] != ' ' && msg[0] != '\0')
+            std::cout << msg << std::endl;
+        free(msg);
+    }
+}
+
 int main()
 {
     int sock;
@@ -80,6 +97,15 @@ int main()
     recv(sock, buf, 1024, 0);
     std::cout << buf << std::endl;
     free(buf);
+    std::string message;
+    std::thread receive(read_msg, sock);
+    receive.detach();
+    while(true)
+    {
+        std::getline(std::cin, message);
+        send(sock, message.c_str(), message.length(), 0);\
+        message.clear();
+    }
 
     return 0;
 }

@@ -19,13 +19,16 @@ std::string get_time()
 	time(&tiempo);
 	struct tm* a = (tm*)malloc(1 * sizeof(tm));
 	localtime_r(&tiempo, a);
+    std::string h = ft_itoa(a->tm_hour);
     std::string min = ft_itoa(a->tm_min);
     std::string sec = ft_itoa(a->tm_sec);
+	if (h.length() == 1)
+		h = std::format("{}{}", "0", h);
 	if (min.length() == 1)
 		min = std::format("{}{}", "0", min);
     if (sec.length() == 1)
 		sec = std::format("{}{}", "0", sec);
-    std::string ret = std::format("{}:{}:{}", a->tm_hour, min, sec);
+    std::string ret = std::format("{}:{}:{}", h, min, sec);
     free(a);
 	return ret;
 }
@@ -101,6 +104,7 @@ void manage_sv(int socket)
                 
                 log("\x1B[91mError: The client didnt send a number or the number is invalid ",  buf2, "\033[0m\t\t");
             }
+            memset(comp, 0, 1024);
             break;
         
         case 1:
@@ -135,16 +139,16 @@ void manage_sv(int socket)
                     database.remove_value(index);
                     break;
                 }
-                free(buf);
                 buf = (char *)calloc(2, sizeof(char));
                 status = recv(socket, buf, 1, 0);
                 if (buf[0] != '1' || status == -1)
                 {
                     log(tokens[0], " has disconnected");
                     database.remove_value(index);
+                    free(buf);
                     break;
                 }
-                memset(buf, 0, 1);
+                free(buf);
                 log(tokens[0], " kept alive");
                 std::this_thread::sleep_for(std::chrono::milliseconds(5000));
             }
