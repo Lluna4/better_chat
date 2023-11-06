@@ -144,29 +144,34 @@ void load_config()
 void manage_sv(int socket)
 {
     int status = 0;
+    std::string uname;
+    std::string formatted_string;
     char *buf = (char *)calloc(1025, sizeof(char));
     log("Client connected");
     motd.append(1024 - motd.length(), '\0');
     send(socket, motd.c_str(), 1024, 0);
     log("Motd sent: ", motd);
 
+    recv(socket, buf, 1024, 0);
+    uname = buf;
+    memset(buf, 0, 1024);
+    log("Username: ", uname);
     while(true)
     {
         status = recv(socket, buf, 1024, 0);
-        if (status == -1)
+        if (status == -1 || strcmp(buf, "/exit") == 0)
         {
             break;
         }
         for (size_t x = 0; x < clients.size(); x++)
         {
-            if (clients[x] != socket)
-            {
-                send(clients[x], buf, 1024, 0);
-            }
+            formatted_string = std::format("{}: {}", uname, buf);
+            send(clients[x], formatted_string.c_str(), 1024, 0);
         }
         memset(buf, 0, 1024);
+        formatted_string.clear();
     }
-    log_err(std::format("{}{}{}", "Client: ", socket, " has disconnected"));
+    log_err(std::format("{}{}{}", "Client: ", uname, " has disconnected"));
     for (unsigned int i = 0; i < clients.size(); i++)
     {
         if (clients[i] == socket)
@@ -174,6 +179,11 @@ void manage_sv(int socket)
             clients.erase(clients.begin() + i);
             break;
         }
+    }
+    for (size_t x = 0; x < clients.size(); x++)
+    {
+        formatted_string = std::format("\x1B[91m{} has disconnected\033[0m\t\t", uname);
+        send(clients[x], formatted_string.c_str(), 1024, 0);
     }
     free(buf);
     close(socket);

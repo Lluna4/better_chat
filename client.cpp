@@ -10,6 +10,8 @@
 #include "db.hpp"
 
 int PORT = 5050;
+std::string name;
+std::string pron;
 
 void read_msg(int socket)
 {
@@ -54,6 +56,12 @@ int main()
     recv(sock, buf, 1024, 0);
     buff = buf;
     free(buf);
+    std::cout << "What is your preferred username?: ";
+    getline(std::cin, name);
+    std::cout << "What is your preferred pronouns?: ";
+    getline(std::cin, pron);
+    std::cout << std::endl;
+    std::cout << "Chose a chat server!" << std::endl;
     if (buff.find(',') != std::string::npos)
     {
         a = tokenize(buff, ',');
@@ -94,12 +102,15 @@ int main()
         std::cout << "\x1B[91mNo se ha podido conectar con el servidor de chat\033[0m\t\t" << std::endl;
         return -1;
     }
+    system("clear");
     recv(sock, buf, 1024, 0);
     std::cout << buf << std::endl;
     free(buf);
     std::string message;
     std::thread receive(read_msg, sock);
     receive.detach();
+    name = std::format("{} ({})", name, pron);
+    send(sock, name.append(100 - name.length(), '\0').c_str(), 1024, 0);
     while(true)
     {
         std::getline(std::cin, message);
