@@ -91,7 +91,7 @@ void manage_sv(int socket)
             recv(socket, buf, 1, 0);
             buf2 = buf;
 	        log("received: ", buf2);
-            if (isNumber(buf2) && ft_atoi(buf) <= database.get_size())
+            if (isNumber(buf2) && ft_atoi(buf) <= database.get_size() && ft_atoi(buf) >= 1)
             {
                 buf2.clear();
                 buf2 = std::format("{},{}", database.get_value(ft_atoi(buf) - 1)[1], database.get_value(ft_atoi(buf) - 1)[2]);
