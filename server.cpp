@@ -11,10 +11,12 @@
 
 int PORT = 5052;
 int conn_PORT = 5050;
+int API_PORT = 5053;
 const std::string SERVER_IP = "0.0.0.0";
 std::string motd = "Hola! Si ves esto es que todo ha ido genial!";
 const char *name = "Lunasv2";
 std::vector<int> clients;
+std::vector<std::string> unames;
 
 std::string get_time()
 {
@@ -70,6 +72,74 @@ void keepalive(int socket)
     }
 }
 
+void manage_api(int socket)
+{
+    char *buf = (char *)calloc(101, sizeof(char));
+    std::vector<std::string> tokens;
+    std::string ret = "0";
+    while(1)
+    {
+        recv(socket, buf, 100, 0);
+        tokens = tokenize(buf, ' ');
+        free(buf);
+        if (tokens.size() < 2)
+        {
+            send(socket, ret.append(100 - ret.length(), '\0').c_str(), 100, 0);
+            return;
+        }
+        if (tokens[0].compare("get") == 0)
+        {
+            if (tokens[1].compare("users") == 0)
+            {
+                buf = (char *)calloc(101, sizeof(char));
+                ret.clear();
+                for (int x = 0; x < unames.size(); x++)
+                {
+                    if (x == 0)
+                    {
+                        memcpy(buf, unames[x].c_str(), unames[x].length());
+                        continue;
+                    }
+                    strcat(buf, ", ");
+                    strcat(buf, unames[x].c_str());
+                }
+            }
+        }
+        send(socket, buf, 100, 0);
+        break;
+    }
+}
+
+void not_an_api()
+{
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    struct sockaddr_in address;
+    int addrlen = sizeof(address);
+    log("Initializing api server socket...");
+    if (sock == 0)
+    {
+        log("Failed to create socket");
+        return ;
+    }
+    address.sin_family = AF_INET;
+    inet_pton(AF_INET, SERVER_IP.c_str(), &address.sin_addr);
+    address.sin_port = htons(API_PORT);
+    log("Binding api server...");
+    if (bind(sock, (struct sockaddr*)&address, sizeof(address)) < 0)
+    {
+        log("Bind failed");
+    }
+    log("Api server listening", std::format(" {}:{}", "localhost", API_PORT));
+    while (true)
+    {
+        listen(sock, 32);
+        int new_socket = accept(sock, (struct sockaddr*)&address, (socklen_t*)&addrlen);
+        log("New client: ", new_socket);
+        clients.push_back(new_socket);
+        std::thread man_sv(manage_api, new_socket);
+        man_sv.detach();
+    }
+}
 
 void get_servers()
 {
@@ -92,7 +162,7 @@ void get_servers()
     int conn = connect(sock, (struct sockaddr*)&address, sizeof(address));
     send(sock, "1", 1, 0);
     log(conn);
-    std::string sended = std::format("{},{},{}", name, SERVER_IP, ft_itoa(PORT));
+    std::string sended = std::format("{},{},{},{}", name, SERVER_IP, ft_itoa(PORT), ft_itoa(API_PORT));
     log(sended);
     char *comp = (char *)calloc(100, sizeof(char));
     strncpy(comp, sended.c_str(), sended.length());
@@ -105,8 +175,10 @@ void create_config()
 {
     std::ofstream cfg("sv.cfg");
     cfg << "//Central Server config\n";
-    cfg << "//This changes the port the server listens to\n";
+    cfg << "//This changes the port the chat server listens to\n";
     cfg << "port:5051\n";
+    cfg << "//This changes the port the api server listens to\n";
+    cfg << "api_port:5052\n";
     cfg << "//This changes the name of the server for the client\n";
     cfg << "name:Test_sv\n";
     cfg << "//This changes the motd of the server (message that sends first)\n";
@@ -127,6 +199,10 @@ void load_config()
             if (values[0].compare("port") == 0)
             {
                 PORT = atoi(values[1].c_str());
+            }
+            else if (values[0].compare("api_port") == 0)
+            {
+                API_PORT = atoi(values[1].c_str());
             }
             else if (values[0].compare("name") == 0)
             {
@@ -156,6 +232,11 @@ void manage_sv(int socket)
     uname = buf;
     memset(buf, 0, 1024);
     log("Username: ", uname);
+    for (size_t x = 0; x < clients.size(); x++)
+    {
+        formatted_string = std::format("\e[0;32m{} has connected\033[0m\t\t", uname);
+        send(clients[x], formatted_string.c_str(), 1024, 0);
+    }
     while(true)
     {
         status = recv(socket, buf, 1024, 0);
@@ -208,6 +289,7 @@ int main()
         log("Config loaded");
         log("name:", name);
         log("port:", PORT);
+        log("api port:", API_PORT);
     }
     log("Initializing socket...");
     if (sock == 0)
@@ -227,6 +309,9 @@ int main()
     log("Sending information to the central server");
     get_servers();
     log("Information sent");
+    std::thread api_th(not_an_api);
+    api_th.detach();
+    log("Api server started");
     while (true)
     {
         listen(sock, 32);

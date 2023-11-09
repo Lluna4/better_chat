@@ -9,7 +9,7 @@
 #include <format>
 #include <chrono>
 
-db database = db("Servers", {"Name", "Ip", "Port"});
+db database = db("Servers", {"Name", "Ip", "Port", "Api_Port"});
 int PORT = 5050;
 const std::string SERVER_IP = "0.0.0.0";
 
@@ -94,7 +94,7 @@ void manage_sv(int socket)
             if (isNumber(buf2) && ft_atoi(buf) <= database.get_size() && ft_atoi(buf) >= 1)
             {
                 buf2.clear();
-                buf2 = std::format("{},{}", database.get_value(ft_atoi(buf) - 1)[1], database.get_value(ft_atoi(buf) - 1)[2]);
+                buf2 = std::format("{},{},{}", database.get_value(ft_atoi(buf) - 1)[1], database.get_value(ft_atoi(buf) - 1)[2], database.get_value(ft_atoi(buf) - 1)[3]);
                 buf2.append(100 - buf2.length(), '\0');
                 log("Sent server information ", buf2);
                 send(socket, (char *)buf2.c_str(), 100, 0);
@@ -117,7 +117,7 @@ void manage_sv(int socket)
             buf2 = buf;
             log(buf2);
             tokens = tokenize(buf2, ',');
-            if (tokens.size() != 3)
+            if (tokens.size() != 4)
             {
                 log("\x1B[91mError: The server didn't send enough information ", tokens.size(), "\033[0m\t\t");
                 return;
