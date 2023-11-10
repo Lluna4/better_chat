@@ -77,37 +77,36 @@ void manage_api(int socket)
     char *buf = (char *)calloc(101, sizeof(char));
     std::vector<std::string> tokens;
     std::string ret = "0";
-    while(1)
+    recv(socket, buf, 100, 0);
+    tokens = tokenize(buf, ' ');
+    free(buf);
+    if (tokens.size() < 2)
     {
-        recv(socket, buf, 100, 0);
-        tokens = tokenize(buf, ' ');
-        free(buf);
-        if (tokens.size() < 2)
+        send(socket, ret.append(100 - ret.length(), '\0').c_str(), 100, 0);
+        return;
+    }
+    if (tokens[0].compare("get") == 0)
+    {
+        if (tokens[1].compare("users") == 0)
         {
-            send(socket, ret.append(100 - ret.length(), '\0').c_str(), 100, 0);
-            return;
-        }
-        if (tokens[0].compare("get") == 0)
-        {
-            if (tokens[1].compare("users") == 0)
+            buf = (char *)calloc(101, sizeof(char));
+            ret.clear();
+            log("Getting users...");
+            for (int x = 0; x < unames.size(); x++)
             {
-                buf = (char *)calloc(101, sizeof(char));
-                ret.clear();
-                for (int x = 0; x < unames.size(); x++)
+                if (x == 0)
                 {
-                    if (x == 0)
-                    {
-                        memcpy(buf, unames[x].c_str(), unames[x].length());
-                        continue;
-                    }
-                    strcat(buf, ", ");
-                    strcat(buf, unames[x].c_str());
+                    memcpy(buf, unames[x].c_str(), unames[x].length());
+                    continue;
                 }
+                strcat(buf, ", ");
+                strcat(buf, unames[x].c_str());
             }
         }
-        send(socket, buf, 100, 0);
-        break;
     }
+    log("api sent:", buf);
+    send(socket, buf, 100, 0);
+    free(buf);
 }
 
 void not_an_api()
@@ -134,7 +133,7 @@ void not_an_api()
     {
         listen(sock, 32);
         int new_socket = accept(sock, (struct sockaddr*)&address, (socklen_t*)&addrlen);
-        log("New client: ", new_socket);
+        log("New api client: ", new_socket);
         clients.push_back(new_socket);
         std::thread man_sv(manage_api, new_socket);
         man_sv.detach();
@@ -232,6 +231,7 @@ void manage_sv(int socket)
     uname = buf;
     memset(buf, 0, 1024);
     log("Username: ", uname);
+    unames.push_back(uname);
     for (size_t x = 0; x < clients.size(); x++)
     {
         formatted_string = std::format("\e[0;32m{} has connected\033[0m\t\t", uname);

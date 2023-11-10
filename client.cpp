@@ -191,6 +191,7 @@ int main()
             }
             send(sock, message.c_str(), message.length(), 0);
             message.clear();
+            std::cout << "\033[A\033[2K";
         }
     }
     return 0;
