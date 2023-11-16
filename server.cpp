@@ -232,11 +232,11 @@ void manage_sv(int socket)
     memset(buf, 0, 1024);
     log("Username: ", uname);
     unames.push_back(uname);
-    for (size_t x = 0; x < clients.size(); x++)
+    /*for (size_t x = 0; x < clients.size(); x++)
     {
         formatted_string = std::format("\e[0;32m{} has connected\033[0m\t\t", uname);
         send(clients[x], formatted_string.c_str(), 1024, 0);
-    }
+    }*/
     while(true)
     {
         status = recv(socket, buf, 1024, 0);
@@ -258,6 +258,7 @@ void manage_sv(int socket)
         if (clients[i] == socket)
         {
             clients.erase(clients.begin() + i);
+            unames.erase(unames.begin() + i);
             break;
         }
     }
