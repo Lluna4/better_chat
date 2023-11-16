@@ -18,6 +18,7 @@ int message_sent = 0;
 int first = 1;
 std::string bottom_text = "Enter message: ";
 std::string uname;
+int sv = 0;
 
 void clear_messages()
 {
@@ -96,6 +97,7 @@ void connection()
     char *buf = (char *)calloc(101, sizeof(char));
     std::string buff;
     std::vector<std::string> a;
+    int status = 0;
     
     buff = check_available_servers(&sock);
     mess.push_back("Select a server!");
@@ -148,8 +150,23 @@ void connection()
     mess.push_back(buff);
     new_render = true;
     send(sock, uname.append(100 - uname.length(), '\0').c_str(), 100, 0);
-    std::string message = "/exit";
-    send(sock, message.append(1024- message.length(), '\0').c_str(), 1024, 0);
+
+    //recv_message
+    memset(buf, 0, 1024);
+    sv = sock;
+    while (1)
+    {
+        status = recv(sock, buf, 1024, 0);
+        if (status == -1)
+        {
+            free(buf);
+            break;
+        }
+        buff = buf;
+        mess.push_back(buff);
+        new_render = true;
+        memset(buf, 0, 1024);
+    }
 }
 
 void render_pad(WINDOW *pad)
@@ -170,6 +187,7 @@ void render_pad(WINDOW *pad)
             prefresh(pad, pad_pos, 0, 0, 0, max_y - 2, max_x - 1);
             new_render = false;
         }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
 
@@ -222,12 +240,9 @@ int main()
         }
         mvprintw(max_y - 1, 0, "Enter message: ");
         mvgetstr(max_y - 1, strlen("Enter message: "), buf);
-
-        buff = buf;
-        mess.push_back(buff);
-        new_render = true;
         
-
+        buff = buf;
+        send(sv, buff.append(1024 - buff.length(), '\0').c_str(), 1024, 0);
         memset(buf, 0, 1024);
     }
     delwin(pad);

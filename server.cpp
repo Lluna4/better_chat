@@ -249,6 +249,7 @@ void manage_sv(int socket)
             formatted_string = std::format("{}: {}", uname, buf);
             send(clients[x], formatted_string.c_str(), 1024, 0);
         }
+        log("message received.");
         memset(buf, 0, 1024);
         formatted_string.clear();
     }
