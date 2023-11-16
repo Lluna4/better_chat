@@ -265,10 +265,13 @@ void manage_sv(int socket)
             break;
         }
     }
-    for (size_t x = 0; x < clients.size(); x++)
+    if (clients.size() >= 0)
     {
-        formatted_string = std::format("\x1B[91m{} has disconnected\033[0m\t\t", uname);
-        send(clients[x], formatted_string.c_str(), 1024, 0);
+        for (size_t x = 0; x < clients.size(); x++)
+        {
+            formatted_string = std::format("\x1B[91m{} has disconnected\033[0m\t\t", uname);
+            send(clients[x], formatted_string.c_str(), 1024, 0);
+        }
     }
     free(buf);
     close(socket);
