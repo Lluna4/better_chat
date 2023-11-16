@@ -244,6 +244,8 @@ void manage_sv(int socket)
         {
             break;
         }
+        if (buf[0] == '\0')
+            break;
         for (size_t x = 0; x < clients.size(); x++)
         {
             formatted_string = std::format("{}: {}", uname, buf);
