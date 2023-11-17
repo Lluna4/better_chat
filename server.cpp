@@ -269,7 +269,7 @@ void manage_sv(int socket)
     {
         for (size_t x = 0; x < clients.size(); x++)
         {
-            formatted_string = std::format("\x1B[91m{} has disconnected\033[0m\t\t", uname);
+            formatted_string = std::format("{} has disconnected", uname);
             send(clients[x], formatted_string.c_str(), 1024, 0);
         }
     }
