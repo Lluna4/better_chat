@@ -13,6 +13,7 @@
 
 std::vector<std::string> mess;
 int PORT = 5050;
+int API_PORT = 5052;
 int new_render = 0;
 int message_sent = 0;
 int first = 1;
@@ -57,11 +58,6 @@ std::string check_available_servers()
     struct sockaddr_in address;
     
     sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock == -1)
-    {
-        std::cout << "ERROR" << std::endl;
-    }
-    std::cout << sock << std::endl;
     
     address.sin_addr.s_addr = inet_addr("127.0.0.1");
     address.sin_family = AF_INET;
@@ -130,6 +126,7 @@ void connection()
     {
         a[0] = "127.0.0.1";
     }
+    API_PORT = atoi(a[2].c_str());
     close(sock);
     sock = socket(AF_INET, SOCK_STREAM, 0);
     address2.sin_addr.s_addr = inet_addr(a[0].c_str());
@@ -173,6 +170,8 @@ void render_pad(WINDOW *pad)
 {
     int max_y = 0, max_x = 0;
     int pad_pos = 0;
+
+    //attron(COLOR_PAIR(2));
     while (1)
     {
         if (new_render && first == 0)
@@ -191,6 +190,60 @@ void render_pad(WINDOW *pad)
     }
 }
 
+std::string get_users()
+{
+    int sock;
+    struct sockaddr_in address;
+    char *buf = (char *)calloc(101, sizeof(char));
+    std::vector<std::string> a;
+    std::string message = "get users";
+    //bool playing = true;
+    std::string buff;
+    
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock == -1)
+    {
+        std::cout << "ERROR" << std::endl;
+    }
+    std::cout << sock << std::endl;
+    
+    address.sin_addr.s_addr = inet_addr("127.0.0.1");
+    address.sin_family = AF_INET;
+    address.sin_port = htons(API_PORT);
+    int conn = connect(sock, (struct sockaddr*)&address, sizeof(address));
+    send(sock, message.append(100 - message.length(), '\0').c_str(), 100, 0);
+    recv(sock, buf, 100, 0);
+    
+    buff = buf;
+    return buff;
+}
+
+void command(std::string com)
+{
+    std::vector<std::string> tokens = tokenize(com);
+    std::string ret;
+
+    if(tokens[0].compare("list") == 0)
+    {
+        if (tokens.size() < 2)
+            return;
+        else if (tokens[1].compare("servers") == 0)
+        {
+            ret = check_available_servers();
+            mess.push_back(ret);
+            new_render = true;
+        }
+        else if (tokens[1].compare("users"))
+        {
+            ret = get_users();
+            mess.push_back(ret);
+            new_render = true;
+        }
+        
+    }
+
+}
+
 int main() 
 {
     std::thread conn_th(connection);
@@ -202,6 +255,7 @@ int main()
     {
         start_color();
         init_pair(1, COLOR_WHITE, COLOR_BLACK);
+        init_pair(2, COLOR_MAGENTA, COLOR_BLACK);
     }
 
     char *buf = (char *)calloc(1024, sizeof(char));
@@ -240,8 +294,17 @@ int main()
         }
         mvprintw(max_y - 1, 0, "Enter message: ");
         mvgetstr(max_y - 1, strlen("Enter message: "), buf);
+
+        if (buf[0] == '\0')
+            continue;
         
         buff = buf;
+        if (buff[0] == '/')
+        {
+            buff.erase(0, 1);
+            command(buff);
+            continue;
+        }
         send(sv, buff.append(1024 - buff.length(), '\0').c_str(), 1024, 0);
         memset(buf, 0, 1024);
     }
