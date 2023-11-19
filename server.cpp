@@ -216,11 +216,31 @@ void load_config()
     }
 }
 
+void command(std::string a, int socket)
+{
+    std::vector<std::string> token = tokenize(a);
+
+    if (token.size() > 2)
+    {
+        if (token[0].compare("/msg") == 0)
+        {
+            for (int i = 0; i < unames.size(); i++)
+            {
+                if (token[1].compare(unames[i]) == 0)
+                {
+                    send(socket, "Se ha encontrado a alguien", 1024, 0);
+                }
+            }
+        }
+    }
+}
+
 void manage_sv(int socket)
 {
     int status = 0;
     std::string uname;
     std::string formatted_string;
+    std::string buff;
     char *buf = (char *)calloc(1025, sizeof(char));
     log("Client connected");
     motd.append(1024 - motd.length(), '\0');
@@ -246,6 +266,9 @@ void manage_sv(int socket)
         }
         if (buf[0] == '\0')
             break;
+
+        buff = buf;
+        if (buff.starts_with("/msg")
         for (size_t x = 0; x < clients.size(); x++)
         {
             formatted_string = std::format("{}: {}", uname, buf);
@@ -265,7 +288,7 @@ void manage_sv(int socket)
             break;
         }
     }
-    if (clients.size() >= 0)
+    if (clients.size() > 0)
     {
         for (size_t x = 0; x < clients.size(); x++)
         {

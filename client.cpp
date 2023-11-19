@@ -74,7 +74,7 @@ std::string check_available_servers()
 void free_unseen_messages(int maxy)
 {
     int index = 0;
-    if (maxy < mess.size())
+    if (maxy < mess.size() && maxy > 1)
     {
         while (maxy < mess.size())
         {
@@ -94,6 +94,7 @@ void connection()
     std::string buff;
     std::vector<std::string> a;
     int status = 0;
+    std::string sv_name;
     
     buff = check_available_servers(&sock);
     mess.push_back("Select a server!");
@@ -108,6 +109,7 @@ void connection()
     else
     {
         mess.push_back(std::format("1) {}\n", buff));
+        a.push_back(buff);
     }
     new_render = 1;
     while (1)
@@ -115,6 +117,7 @@ void connection()
         if (message_sent == 1)
         {
             send(sock, (char *)mess[mess.size() - 1].c_str(), 1, 0);
+            sv_name = a[atoi(mess[mess.size() - 1].c_str()) - 1];
             mess.pop_back();
             break;
         }
@@ -142,6 +145,7 @@ void connection()
         return;
     }
     clear_messages();
+    mess.push_back(std::format("You joined {}", sv_name));
     recv(sock, buf, 1024, 0);
     buff = buf;
     mess.push_back(buff);
@@ -160,6 +164,7 @@ void connection()
             break;
         }
         buff = buf;
+        buff = std::format("+------------------+\n|{0:<18}|\n+------------------+\n|{1:<18}|\n+------------------+", "Luna", buff);
         mess.push_back(buff);
         new_render = true;
         memset(buf, 0, 1024);
@@ -201,6 +206,7 @@ void render_pad(WINDOW *pad)
             new_render = false;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        free_unseen_messages(max_y);
     }
 }
 
@@ -266,6 +272,9 @@ int main()
         init_pair(1, COLOR_WHITE, COLOR_BLACK);
         init_pair(2, COLOR_MAGENTA, COLOR_BLACK);
         init_pair(3, COLOR_RED, COLOR_BLACK);
+        init_color(10, 227, 216, 2);
+        init_pair(4, 10, COLOR_BLACK);
+        mess.push_back(std::format("Terminal has {} colors", COLORS));
     }
 
     char *buf = (char *)calloc(1024, sizeof(char));
