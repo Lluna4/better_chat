@@ -107,6 +107,7 @@ void manage_api(int socket)
     log("api sent:", buf);
     send(socket, buf, 100, 0);
     free(buf);
+    close(socket);
 }
 
 void not_an_api()
@@ -252,11 +253,11 @@ void manage_sv(int socket)
     memset(buf, 0, 1024);
     log("Username: ", uname);
     unames.push_back(uname);
-    /*for (size_t x = 0; x < clients.size(); x++)
+    for (size_t x = 0; x < clients.size(); x++)
     {
-        formatted_string = std::format("\e[0;32m{} has connected\033[0m\t\t", uname);
+        formatted_string = std::format("{} has connected", uname);
         send(clients[x], formatted_string.c_str(), 1024, 0);
-    }*/
+    }
     while(true)
     {
         status = recv(socket, buf, 1024, 0);
@@ -268,7 +269,6 @@ void manage_sv(int socket)
             break;
 
         buff = buf;
-        if (buff.starts_with("/msg")
         for (size_t x = 0; x < clients.size(); x++)
         {
             formatted_string = std::format("{}: {}", uname, buf);
