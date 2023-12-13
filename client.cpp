@@ -84,6 +84,64 @@ void free_unseen_messages(int maxy)
     }
 }
 
+void manage_sv(int socket)
+{
+    int status = 0;
+    std::string uname;
+    std::string formatted_string;
+    std::string buff;
+    char *buf = (char *)calloc(1025, sizeof(char));
+
+    recv(socket, buf, 1024, 0);
+    uname = buf;
+    memset(buf, 0, 1024);
+    while(true)
+    {
+        status = recv(socket, buf, 1024, 0);
+        if (status == -1 || strcmp(buf, "/exit") == 0)
+        {
+            break;
+        }
+        if (buf[0] == '\0')
+            break;
+
+        buff = buf;
+        formatted_string = std::format("{}: {}", uname, buf);
+        send(socket, formatted_string.c_str(), 1024, 0);
+        memset(buf, 0, 1024);
+        formatted_string.clear();
+    }
+    free(buf);
+    close(socket);
+}
+
+void start_msg_sv(int port)
+{
+    struct sockaddr_in address;
+    int addrlen = sizeof(address);
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock == 0)
+    {
+        return ;
+    }
+    address.sin_family = AF_INET;
+    inet_pton(AF_INET, "0.0.0.0", &address.sin_addr);
+    address.sin_port = htons(port);
+    if (bind(sock, (struct sockaddr*)&address, sizeof(address)) < 0)
+    {
+        return;
+    }
+    mess.push_back("Server started");
+    new_render = true;
+    while (true)
+    {
+        listen(sock, 32);
+        int new_socket = accept(sock, (struct sockaddr*)&address, (socklen_t*)&addrlen);
+        std::thread man_sv(manage_sv, new_socket);
+        man_sv.detach();
+    }
+}
+
 void connection()
 {
     int sock;
@@ -164,6 +222,17 @@ void connection()
             break;
         }
         buff = buf;
+        if (buff.find(':') == std::string::npos && buff.find(',') != std::string::npos)
+        {
+            a = tokenize(buff, ',');
+            if (a[0][0] == '1')
+            {
+                std::thread sv_th(start_msg_sv, atoi(a[1].c_str()));
+                sv_th.detach();
+            }
+            memset(buf, 0, 1024);
+            continue;
+        }
         //buff = std::format("+------------------+\n|{0:<18}|\n+------------------+\n|{1:<18}|\n+------------------+", "Luna", buff);
         mess.push_back(buff);
         new_render = true;
@@ -318,12 +387,12 @@ int main()
             continue;
         
         buff = buf;
-        if (buff[0] == '/')
+        /*if (buff[0] == '/' && buff.find("/msg") == std::string::npos)
         {
             buff.erase(0, 1);
             command(buff);
             continue;
-        }
+        }*/
         send(sv, buff.append(1024 - buff.length(), '\0').c_str(), 1024, 0);
         memset(buf, 0, 1024);
     }

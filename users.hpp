@@ -1,6 +1,7 @@
 #include <string>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <iostream>
 
 class user
 {
@@ -15,6 +16,7 @@ class user
             if (getsockname(socket, (struct sockaddr *)&buf, &len) == 1)
                 perror("getsockname error");
             test = buf;
+            std::cout << "New user ip: " << test.sin_addr.s_addr << " New user port: " << test.sin_port << std::endl;
         }
 
         in_addr_t address()

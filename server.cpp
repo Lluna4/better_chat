@@ -1,7 +1,6 @@
 #include "db.hpp"
 #include "tokenize.hpp"
 #include <netinet/in.h>
-#include <iostream>
 #include <cstring>
 #include <ctime>
 #include <format>
@@ -171,7 +170,7 @@ void get_servers()
 void create_config()
 {
     std::ofstream cfg("sv.cfg");
-    cfg << "//Central Server config\n";
+    cfg << "//Server config\n";
     cfg << "//This changes the port the chat server listens to\n";
     cfg << "port:5051\n";
     cfg << "//This changes the port the api server listens to\n";
@@ -203,7 +202,7 @@ void load_config()
             }
             else if (values[0].compare("name") == 0)
             {
-                name = (char *)values[1].c_str();    
+                name = strdup((char *)values[1].c_str());    
             }
             else if (values[0].compare("motd") == 0)
             {
@@ -214,25 +213,34 @@ void load_config()
     }
 }
 
-/*
+
 void command(std::string a, int socket)
 {
     std::vector<std::string> token = tokenize(a);
 
-    if (token.size() > 2)
+    if (token.size() >= 2)
     {
+        log("Tokens:");
+        log(token[0]);
+        log(token[1]);
         if (token[0].compare("/msg") == 0)
         {
-            for (int i = 0; i < unames.size(); i++)
+            for (int i = 0; i < usuarios.size(); i++)
             {
-                if (token[1].compare(unames[i]) == 0)
+                if (token[1].compare(usuarios[i].name().c_str()) == 0)
                 {
-                    send(socket, "Se ha encontrado a alguien", 1024, 0);
+                    struct sockaddr_in buf;
+                    socklen_t len = sizeof(buf);
+                    if (getsockname(socket, (struct sockaddr *)&buf, &len) == 1)
+                        perror("getsockname error");
+                    std::string port = std::to_string(buf.sin_port);
+                    send(socket, std::format("1,{}", port).c_str(), 1024, 0);
+                    log("Sent ", std::format("1,{}", port).c_str());
                 }
             }
         }
     }
-}*/
+}
 
 void manage_sv(int socket)
 {
@@ -251,6 +259,8 @@ void manage_sv(int socket)
     memset(buf, 0, 1024);
     log("Username: ", uname);
     usuarios.push_back(user(uname, socket));
+    log("New user ip ", usuarios.back().address());
+    log("New user port ", usuarios.back().port());
     for (size_t x = 0; x < usuarios.size(); x++)
     {
         formatted_string = std::format("{} has connected", uname);
@@ -267,6 +277,12 @@ void manage_sv(int socket)
             break;
 
         buff = buf;
+        if (buff[0] == '/')
+        {
+            command(buff, socket);
+            memset(buf, 0, 1024);
+            continue;
+        }
         for (size_t x = 0; x < usuarios.size(); x++)
         {
             formatted_string = std::format("{}: {}", uname, buf);
