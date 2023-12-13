@@ -164,7 +164,7 @@ void connection()
             break;
         }
         buff = buf;
-        buff = std::format("+------------------+\n|{0:<18}|\n+------------------+\n|{1:<18}|\n+------------------+", "Luna", buff);
+        //buff = std::format("+------------------+\n|{0:<18}|\n+------------------+\n|{1:<18}|\n+------------------+", "Luna", buff);
         mess.push_back(buff);
         new_render = true;
         memset(buf, 0, 1024);
