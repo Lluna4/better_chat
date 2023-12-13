@@ -1,13 +1,12 @@
 #include "db.hpp"
 #include "tokenize.hpp"
-#include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
 #include <iostream>
 #include <cstring>
 #include <ctime>
 #include <format>
 #include <filesystem>
+#include "users.hpp"
 
 int PORT = 5052;
 int conn_PORT = 5050;
@@ -15,8 +14,7 @@ int API_PORT = 5053;
 const std::string SERVER_IP = "0.0.0.0";
 std::string motd = "Hola! Si ves esto es que todo ha ido genial!";
 const char *name = "Lunasv2";
-std::vector<int> clients;
-std::vector<std::string> unames;
+std::vector<user> usuarios;
 
 std::string get_time()
 {
@@ -92,15 +90,15 @@ void manage_api(int socket)
             buf = (char *)calloc(101, sizeof(char));
             ret.clear();
             log("Getting users...");
-            for (int x = 0; x < unames.size(); x++)
+            for (int x = 0; x < usuarios.size(); x++)
             {
                 if (x == 0)
                 {
-                    memcpy(buf, unames[x].c_str(), unames[x].length());
+                    memcpy(buf, usuarios[x].name().c_str(), usuarios[x].name().length());
                     continue;
                 }
                 strcat(buf, ", ");
-                strcat(buf, unames[x].c_str());
+                strcat(buf, usuarios[x].name().c_str());
             }
         }
     }
@@ -135,7 +133,6 @@ void not_an_api()
         listen(sock, 32);
         int new_socket = accept(sock, (struct sockaddr*)&address, (socklen_t*)&addrlen);
         log("New api client: ", new_socket);
-        clients.push_back(new_socket);
         std::thread man_sv(manage_api, new_socket);
         man_sv.detach();
     }
@@ -217,6 +214,7 @@ void load_config()
     }
 }
 
+/*
 void command(std::string a, int socket)
 {
     std::vector<std::string> token = tokenize(a);
@@ -234,7 +232,7 @@ void command(std::string a, int socket)
             }
         }
     }
-}
+}*/
 
 void manage_sv(int socket)
 {
@@ -252,11 +250,11 @@ void manage_sv(int socket)
     uname = buf;
     memset(buf, 0, 1024);
     log("Username: ", uname);
-    unames.push_back(uname);
-    for (size_t x = 0; x < clients.size(); x++)
+    usuarios.push_back(user(uname, socket));
+    for (size_t x = 0; x < usuarios.size(); x++)
     {
         formatted_string = std::format("{} has connected", uname);
-        send(clients[x], formatted_string.c_str(), 1024, 0);
+        send(usuarios[x].getsocket(), formatted_string.c_str(), 1024, 0);
     }
     while(true)
     {
@@ -269,31 +267,30 @@ void manage_sv(int socket)
             break;
 
         buff = buf;
-        for (size_t x = 0; x < clients.size(); x++)
+        for (size_t x = 0; x < usuarios.size(); x++)
         {
             formatted_string = std::format("{}: {}", uname, buf);
-            send(clients[x], formatted_string.c_str(), 1024, 0);
+            send(usuarios[x].getsocket(), formatted_string.c_str(), 1024, 0);
         }
         log("message received.");
         memset(buf, 0, 1024);
         formatted_string.clear();
     }
     log_err(std::format("{}{}{}", "Client: ", uname, " has disconnected"));
-    for (unsigned int i = 0; i < clients.size(); i++)
+    for (unsigned int i = 0; i < usuarios.size(); i++)
     {
-        if (clients[i] == socket)
+        if (usuarios[i].getsocket() == socket)
         {
-            clients.erase(clients.begin() + i);
-            unames.erase(unames.begin() + i);
+            usuarios.erase(usuarios.begin() + i);
             break;
         }
     }
-    if (clients.size() > 0)
+    if (usuarios.size() > 0)
     {
-        for (size_t x = 0; x < clients.size(); x++)
+        for (size_t x = 0; x < usuarios.size(); x++)
         {
             formatted_string = std::format("{} has disconnected", uname);
-            send(clients[x], formatted_string.c_str(), 1024, 0);
+            send(usuarios[x].getsocket(), formatted_string.c_str(), 1024, 0);
         }
     }
     free(buf);
@@ -347,7 +344,6 @@ int main()
         listen(sock, 32);
         int new_socket = accept(sock, (struct sockaddr*)&address, (socklen_t*)&addrlen);
         log("New client: ", new_socket);
-        clients.push_back(new_socket);
         std::thread man_sv(manage_sv, new_socket);
         man_sv.detach();
     }

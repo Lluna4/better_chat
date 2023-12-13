@@ -32,6 +32,11 @@ class user
             return uname_;
         }
 
+        int getsocket()
+        {
+            return socket_;
+        }
+
     private:
         std::string uname_;
         int socket_;
