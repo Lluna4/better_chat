@@ -4,8 +4,8 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
-#include "tokenize.hpp"
-#include "db.hpp"
+#include "../tokenize.hpp"
+#include "../db.hpp"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>

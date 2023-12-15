@@ -6,8 +6,8 @@
 #include <chrono>
 #include <thread>
 #include <vector>
-#include "tokenize.hpp"
-#include "db.hpp"
+#include "../tokenize.hpp"
+#include "../db.hpp"
 #include <signal.h>
 
 int PORT = 5050;
