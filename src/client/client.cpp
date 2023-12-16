@@ -158,7 +158,7 @@ void connection()
     sv = sock;
     while (1)
     {
-        status = recv(sock, buf, 1024, 0);
+        status = recv(sv, buf, 1024, 0);
         if (status == -1)
         {
             free(buf);
@@ -170,7 +170,7 @@ void connection()
             a = tokenize(buff, ',');
             if (a[0][0] == '1')
             {
-                std::thread sv_th(start_msg_sv, atoi(a[1].c_str()));
+                std::thread sv_th(start_msg_sv, atoi(a[1].c_str()), &sv);
                 sv_th.detach();
             }
             memset(buf, 0, 1024);

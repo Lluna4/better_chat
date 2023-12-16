@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <format>
 #include <string.h>
+#include <thread>
 
 void manage_sv(int socket)
 {
@@ -28,7 +29,7 @@ void manage_sv(int socket)
             break;
 
         buff = buf;
-        formatted_string = std::format("{}: {}", uname, buf);
+        formatted_string = std::format("{}:  {}", uname, buf);
         send(socket, formatted_string.c_str(), 1024, 0);
         memset(buf, 0, 1024);
         formatted_string.clear();
@@ -37,9 +38,23 @@ void manage_sv(int socket)
     close(socket);
 }
 
-void start_msg_sv(int port)
+void listen_th(int port, int sock, struct sockaddr_in address)
+{
+    int addrlen = sizeof(address);
+    listen(sock, 32);
+    
+    int new_socket = accept(sock, (struct sockaddr*)&address, (socklen_t*)&addrlen);
+    std::thread man_sv(manage_sv, new_socket);
+    man_sv.detach();
+    new_socket = accept(sock, (struct sockaddr*)&address, (socklen_t*)&addrlen);
+    std::thread man_svv(manage_sv, new_socket);
+    man_svv.detach();
+}
+
+void start_msg_sv(int port, int *sockk)
 {
     struct sockaddr_in address;
+    struct sockaddr_in address2;
     int addrlen = sizeof(address);
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock == 0)
@@ -47,13 +62,16 @@ void start_msg_sv(int port)
         return ;
     }
     address.sin_family = AF_INET;
+    address2.sin_family = AF_INET;
     inet_pton(AF_INET, "0.0.0.0", &address.sin_addr);
+    address2.sin_addr.s_addr = inet_addr("127.0.0.1");
     address.sin_port = htons(port);
+    address2.sin_port = htons(port);
     if (bind(sock, (struct sockaddr*)&address, sizeof(address)) < 0)
     {
         return;
     }
-    listen(sock, 32);
-    int new_socket = accept(sock, (struct sockaddr*)&address, (socklen_t*)&addrlen);
-    manage_sv(new_socket);
+    std::thread listen_thread(listen_th, port, sock, address);
+    listen_thread.detach();
+    connect(*sockk, (struct sockaddr*)&address2, addrlen);
 }
