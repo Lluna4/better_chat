@@ -171,12 +171,27 @@ void connection()
             if (a[0][0] == '1')
             {
                 struct address addr = start_msg_sv(ntohs(atoi(a[1].c_str())));
-                address2.sin_port = atoi(a[1].c_str()) + 1;
+                address2.sin_port = addr.port;
                 address2.sin_addr.s_addr = inet_addr(addr.ip.c_str());
                 close(sv);
-                sv = connect(sv, (sockaddr *)&address2, sizeof(address2));
+                sv = socket(AF_INET, SOCK_STREAM, 0);
+                connect(sv, (sockaddr *)&address2, sizeof(address2));
                 send(sv, uname.c_str(), 1024, 0);
             }
+	    else if (a[0][0] == '0' && a.size() == 3)
+	    {
+            address2.sin_port = atoi(a[2].c_str()) + 1;
+            struct in_addr ip_addr;
+            ip_addr.s_addr = atoi(a[1].c_str());
+            buff = a[1];
+            if (a[1].compare("0.0.0.0") == 0)
+                buff = "127.0.0.1";
+            address2.sin_addr.s_addr = inet_addr(buff.c_str());
+            close(sv);
+            sv = socket(AF_INET, SOCK_STREAM, 0);
+            connect(sv, (sockaddr *)&address2, sizeof(address2));
+            send(sv, uname.c_str(), 1024, 0);
+	    }
             memset(buf, 0, 1024);
             continue;
         }

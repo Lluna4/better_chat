@@ -15,33 +15,26 @@ struct address
 
 void server(int sock)
 {
-    int status = 0;
-    std::string uname;
-    std::string formatted_string;
-    std::string buff;
-    char *buf = (char *)calloc(1025, sizeof(char));
+    	int status = 0;
+	std::string uname;
+	std::string formatted_string;
+	std::string buff;
+	char *buf = (char *)calloc(1025, sizeof(char));
 
-    recv(sock, buf, 1024, 0);
-    uname = buf;
-    memset(buf, 0, 1024);
-    while(true)
-    {
-        status = recv(sock, buf, 1024, 0);
-        if (status == -1 || strcmp(buf, "/exit") == 0)
-        {
-            break;
-        }
-        if (buf[0] == '\0')
-            break;
-
-        buff = buf;
-        formatted_string = std::format("{}:  {}", uname, buf);
-        send(sock, formatted_string.c_str(), 1024, 0);
-        memset(buf, 0, 1024);
-        formatted_string.clear();
-    }
-    free(buf);
-    close(sock);
+	recv(sock, buf, 1024, 0);
+	uname = buf;
+	memset(buf, 0, 1024);
+	while (1)
+	{
+		status = recv(sock, buf, 1024, 0);
+		if (status == -1)
+			return ;
+		buff = buf;
+		formatted_string = std::format("{}: {}", uname, buff);
+		send(sock, formatted_string.c_str(), 1024, 0);
+		memset(buf, 0, 1025);
+	}
+	close(sock);
 }
 
 void listen_th(int sock, sockaddr_in addr)
@@ -77,7 +70,7 @@ address start_msg_sv(int port)
 	std::thread listen_thread(listen_th, sock, addr);
 	listen_thread.detach();
 	
-	ret.port = port;
+	ret.port = htons(port) + 1;
 	ret.ip = "127.0.0.1";
 	return ret;
 }
