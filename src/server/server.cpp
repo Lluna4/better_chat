@@ -214,7 +214,7 @@ void load_config()
 }
 
 
-void command(std::string a, int socket)
+void command(std::string a, int socket, std::string uname)
 {
     std::vector<std::string> token = tokenize(a);
 
@@ -229,17 +229,17 @@ void command(std::string a, int socket)
             {
                 if (token[1].compare(usuarios[i].name().c_str()) == 0)
                 {
-		    if (usuarios[i].getsocket() == socket)
-			    return ;
+                    if (usuarios[i].getsocket() == socket)
+                        return ;
                     struct sockaddr_in buf;
                     socklen_t len = sizeof(buf);
                     if (getsockname(socket, (struct sockaddr *)&buf, &len) == 1)
                         perror("getsockname error");
-                    std::string port = std::to_string(buf.sin_port);
-                    send(socket, std::format("1,{}", port).c_str(), 1024, 0);
-                    log("Sent ", std::format("1,{}", port).c_str());
-		    send(usuarios[i].getsocket(), std::format("0,{},{}", inet_ntoa(buf.sin_addr), port).c_str(), 1024, 0);
-		    log("Sent ", std::format("0,{},{}",buf.sin_addr.s_addr ,port).c_str());
+                    std::string port = std::to_string(buf.sin_port + 10);
+                    send(socket, std::format("1,{},{}", port, usuarios[i].name()).c_str(), 1024, 0);
+                    log("Sent ", std::format("1,{},{}", port, usuarios[i].name()).c_str());
+                    send(usuarios[i].getsocket(), std::format("0,{},{},{}", inet_ntoa(buf.sin_addr), port, uname).c_str(), 1024, 0);
+                    log("Sent ", std::format("0,{},{},{}", inet_ntoa(buf.sin_addr), port, uname).c_str());
                 }
             }
         }
@@ -283,7 +283,7 @@ void manage_sv(int socket)
         buff = buf;
         if (buff[0] == '/')
         {
-            command(buff, socket);
+            command(buff, socket, uname);
             memset(buf, 0, 1024);
             continue;
         }
