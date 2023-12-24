@@ -10,7 +10,7 @@
 int PORT = 5052;
 int conn_PORT = 5050;
 int API_PORT = 5053;
-const std::string SERVER_IP = "0.0.0.0";
+std::string SERVER_IP = "0.0.0.0";
 std::string motd = "Hola! Si ves esto es que todo ha ido genial!";
 const char *name = "Lunasv2";
 std::vector<user> usuarios;
@@ -179,6 +179,10 @@ void create_config()
     cfg << "name:Test_sv\n";
     cfg << "//This changes the motd of the server (message that sends first)\n";
     cfg << "motd:Hola! Si ves esto es que todo ha ido genial!\n";
+    cfg << "//This changes the address of the central server it connects to (keep blank for localhost)\n";
+    cfg << "centr_addr:\n";
+    cfg << "//This changes the port of the central server it connects to\n";
+    cfg << "centr_port:5050\n";
     cfg.close();
 }
 
@@ -207,6 +211,14 @@ void load_config()
             else if (values[0].compare("motd") == 0)
             {
                 motd = values[1];    
+            }
+            else if (values[0].compare("centr_addr") == 0)
+            {
+                SERVER_IP = values[1];
+            }
+            else if (values[0].compare("centr_port") == 0)
+            {
+                conn_PORT = atoi(values[1].c_str());
             }
         }
         //linea.clear();
@@ -351,6 +363,7 @@ int main()
     if (bind(sock, (struct sockaddr*)&address, sizeof(address)) < 0)
     {
         log("Bind failed");
+        return (-1);
     }
     log("listening", std::format(" {}:{}", "localhost", PORT));
     log("Sending information to the central server");

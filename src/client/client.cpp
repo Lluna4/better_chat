@@ -21,6 +21,8 @@ int first = 1;
 std::string bottom_text = "Enter message: ";
 std::string uname;
 int sv = 0;
+bool md = false;
+std::vector<std::jthread> conn_threads;
 
 void clear_messages()
 {
@@ -180,6 +182,7 @@ void connection()
 				clear_messages();
 				mess.push_back(std::format("You joined a direct message with {}", a[2]));
 				new_render = true;
+				md = true;
 			}
 			else if (a[0][0] == '0' && a.size() == 4)
 			{
@@ -198,6 +201,7 @@ void connection()
 				clear_messages();
 				mess.push_back(std::format("You joined a direct message with {}", a[3]));
 				new_render = true;
+				md = true;
 			}
 		memset(buf, 0, 1024);
 		continue;
@@ -275,6 +279,7 @@ void command(std::string com)
 {
 	std::vector<std::string> tokens = tokenize(com);
 	std::string ret;
+	bool a = tokens.empty();
 
 	if(tokens[0].compare("list") == 0)
 	{
@@ -292,15 +297,27 @@ void command(std::string com)
 			mess.push_back(ret);
 			new_render = true;
 		}
-
 	}
-
+	if (tokens[0].compare("close") == 0&& (md == true && threads.empty() == false))
+	{
+		md = false;
+		close(sv);
+		for (int i = 0; i < threads.size(); i++)
+		{
+			threads[i].request_stop();
+		}
+		clear_messages();
+		for (int i = 0; i < conn_threads.size(); i++)
+		{
+			conn_threads[i].~jthread();
+		}
+		conn_threads.emplace_back(connection);
+	}
 }
 
 int main()
 {
-	std::thread conn_th(connection);
-	conn_th.detach();
+	conn_threads.emplace_back(connection);
 	initscr();
 	cbreak();
 	curs_set(0);
@@ -322,7 +339,6 @@ int main()
 	WINDOW *pad = newpad(1000, COLS);
 	std::thread render_pad_th(render_pad, pad);
 	render_pad_th.detach();
-
 	while (true)
 	{
 		attron(COLOR_PAIR(1));
@@ -356,12 +372,12 @@ int main()
 			continue;
 
 		buff = buf;
-		/*if (buff[0] == '/' && buff.find("/msg") == std::string::npos)
+		if (buff[0] == '/' && buff.find("/msg") == std::string::npos)
 		{
 			buff.erase(0, 1);
 			command(buff);
 			continue;
-		}*/
+		}
 		send(sv, buff.append(1024 - buff.length(), '\0').c_str(), 1024, 0);
 		memset(buf, 0, 1024);
 	}

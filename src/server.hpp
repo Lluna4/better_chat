@@ -8,6 +8,9 @@
 #include <cerrno>
 #include <vector>
 #include <exception>
+#include <condition_variable>
+#include <poll.h>
+#include <fcntl.h>
 
 struct address
 {
@@ -16,23 +19,40 @@ struct address
 };
 
 std::vector<int> clients;
+std::vector<std::jthread> threads;
 
-void server(int sock)
+
+void server(std::stop_token stoken, int sock)
 {
+	struct pollfd pfds[1];
     int status = 0;
 	std::string uname;
 	std::string formatted_string;
 	std::string buff;
+	int num_events = 0;
 	char *buf = (char *)calloc(1025, sizeof(char));
+	pfds[0].fd = sock;
+	pfds[0].events = POLLIN;
 
 	recv(sock, buf, 1024, 0);
 	uname = buf;
 	memset(buf, 0, 1024);
 	while (1)
 	{
-		status = recv(sock, buf, 1024, 0);
+		if (stoken.stop_requested())
+		{
+			close(sock);
+			free(buf);
+			return;
+		}
+		num_events = poll(pfds, 1, 1000);
+		if (num_events == 0)
+			continue;
+		read(sock, buf, 1024);
 		if (status == -1)
 			break;
+		if (buf[0] == '\0')
+            break;
 		buff = buf;
 		formatted_string = std::format("{}: {}", uname, buff);
 		for (int i = 0; i < clients.size();i++) 
@@ -40,23 +60,28 @@ void server(int sock)
 		memset(buf, 0, 1025);
 	}
 	close(sock);
+	free(buf);
 }
 
-void listen_th(int sock, sockaddr_in addr)
+void listen_th(std::stop_token stoken, int sock, sockaddr_in addr)
 {
 	socklen_t addrlen = sizeof(addr);
     while (1)
     {
+		if (stoken.stop_requested())
+		{
+			close(sock);
+			return ;
+		}
         listen(sock, 32);
         int new_sock = accept(sock, nullptr, nullptr);
         if (new_sock < 0) 
         {
-            std::cerr << "Accept failed: " << strerror(errno) << std::endl;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
             continue;
         }
         clients.push_back(new_sock);
-        std::thread sv(server, new_sock);
-        sv.detach();
+		threads.emplace_back(server, new_sock);
     }
 }
 
@@ -65,6 +90,7 @@ address start_msg_sv(int port)
 	struct address ret;
 	clients.clear();
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
+	fcntl(sock, F_SETFL, O_NONBLOCK);
 	if (sock == 0)
 		return ret;
 	struct sockaddr_in addr;
@@ -79,9 +105,7 @@ address start_msg_sv(int port)
 		std::cerr << "Bind failed: " << strerror(errno) << std::endl;
 		exit(-1);
 	}
-	std::thread listen_thread(listen_th, sock, addr);
-	listen_thread.detach();
-	
+	threads.emplace_back(listen_th, sock, addr);
 	ret.port = port;
 	ret.ip = "127.0.0.1";
 	return ret;
